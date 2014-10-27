@@ -3,21 +3,29 @@ part of shell;
 typedef Command(Shell shell, List<String> args);
 typedef void NoSuchCommandHandler(Shell shell, String command, List<String> args);
 typedef String PromptCreator();
+typedef void ShellFunction(Shell shell, List<String> args);
 
 class Shell {
+  static const String _defaultPromptFormat = "{{user}}@{{host}} {{path}}> ";
+
   final Map<String, Command> commands = {};
   final Map<String, String> env = {};
+  final Map<String, ShellFunction> functions = {};
   
-  PromptCreator promptCreator = () {
-    var path = Directory.current.path;
-    var homeDir = Platform.environment["HOME"];
-    if (path.startsWith(homeDir)) {
-      path = path.replaceFirst(homeDir, "~");
+  String get prompt {
+    String promptFormat = _defaultPromptFormat;
+    
+    if (env.containsKey("PROMPT_FORMAT")) {
+      promptFormat = env["PROMPT_FORMAT"];
     }
-    var user = Platform.environment["USER"];
-    var host = Platform.localHostname;
-    return "[${user}@${host} ${path}]\$ ";
-  };
+    
+    return format(promptFormat, replace: {
+      "user": Platform.environment["USER"],
+      "host": Platform.localHostname,
+      "path": ShellUtils.friendlyPath(Directory.current.path),
+      "full_path": Directory.current.path
+    }..addAll(MapUtils.transformKeys(env, (key) => "env:${key}")));
+  }
   
   NoSuchCommandHandler noSuchCommand = _printNoSuchCommand;
   
@@ -29,8 +37,19 @@ class Shell {
     sub = stdin.listen((data) {
       var line = UTF8.decode(data);
       line = line.substring(0, line.length - 1);
+      var parts = line.split(";");
+      
       sub.pause();
-      handle(line).then((_) {
+      var future = new Future.value();
+      
+      for (var part in parts) {
+        part = part.trim();
+        future = future.then((_) {
+          return handle(part);
+        });
+      }
+      
+      future.then((_) {
         sub.resume();
         printPrompt();
       });
@@ -38,7 +57,7 @@ class Shell {
   }
   
   void printPrompt() {
-    stdout.write(promptCreator());
+    stdout.write(prompt);
   }
   
   static void _printNoSuchCommand(Shell shell, String command, List<String> args) {

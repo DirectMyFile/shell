@@ -4,5 +4,6 @@ import "package:shell/commands.dart";
 void main() {
   var shell = new Shell();
   shell.applyCommands(coreutils);
+  shell.applyCommands(builtins);
   shell.start();
 }

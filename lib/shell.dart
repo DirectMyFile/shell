@@ -7,4 +7,3 @@ import "dart:convert";
 
 part "src/main.dart";
 part "src/utils.dart";
-part "src/builtins.dart";

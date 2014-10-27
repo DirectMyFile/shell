@@ -29,6 +29,27 @@ class StringUtils {
   }
 }
 
+class ShellUtils {
+  static String friendlyPath(String path) {
+    var home = Platform.environment["HOME"];
+    if (path.startsWith(home)) {
+      path.replaceFirst(home, "~");
+    }
+    return home;
+  }
+}
+
+class MapUtils {
+  static Map<String, dynamic> transformKeys(Map<String, dynamic> input, String transformer(String key)) {
+    var map = {};
+    for (var key in input.keys) {
+      var newKey = transformer(key);
+      map[newKey] = input[key];
+    }
+    return map;
+  }
+}
+
 String expandVariables(String input, Map<String, String> vars) {
   var originalInput = input;
   var varMatches = _VAR_REGEX.allMatches(input);
